@@ -1,4 +1,4 @@
-const database = require('../src/database');
+const database = require('../database');
 
 exports.getTableData = (req, res) => {
     const tableName = req.params.tableName;
