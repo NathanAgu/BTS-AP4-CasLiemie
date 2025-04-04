@@ -1,29 +1,29 @@
 const database = require('../database');
 
-exports.getTableData = (req, res) => {
+exports.getTableData = async (req, res) => {
     const tableName = req.params.tableName;
 
-    // Vérifier que le nom de la table ne contient que des lettres et chiffres pour éviter l'injection SQL
+    // Vérifier que le nom de la table est valide
     if (!/^[a-zA-Z0-9_]+$/.test(tableName)) {
         return res.status(400).send('Invalid table name');
     }
 
-    const sql = `SELECT * FROM \`${tableName}\``; // Utilisation des backticks pour éviter les erreurs SQL
+    const sql = `SELECT * FROM \`${tableName}\``;
 
-    database.query(sql, (err, results) => {
-        if (err) {
-            console.error('Database error:', err);
-            return res.status(500).send('Error retrieving data from database');
-        }
+    try {
+        const [results] = await database.query(sql);
         res.json(results);
-    });
+    } catch (err) {
+        console.error('Database error:', err);
+        res.status(500).send('Error retrieving data from database');
+    }
 };
 
-exports.addTableData = (req, res) => {
+exports.addTableData = async (req, res) => {
     const tableName = req.params.tableName;
     const data = req.body;
 
-    // Vérifier que le nom de la table ne contient que des lettres et chiffres pour éviter l'injection SQL
+    // Vérifier que le nom de la table est valide
     if (!/^[a-zA-Z0-9_]+$/.test(tableName)) {
         return res.status(400).send('Invalid table name');
     }
@@ -38,21 +38,21 @@ exports.addTableData = (req, res) => {
 
     const sql = `INSERT INTO \`${tableName}\` (${columns}) VALUES (${values})`;
 
-    database.query(sql, Object.values(data), (err, results) => {
-        if (err) {
-            console.error('Database error:', err);
-            return res.status(500).send('Error inserting data into database');
-        }
+    try {
+        const [results] = await database.query(sql, Object.values(data));
         res.status(201).send({ message: 'Data inserted successfully', id: results.insertId });
-    });
+    } catch (err) {
+        console.error('Database error:', err);
+        res.status(500).send('Error inserting data into database');
+    }
 };
 
-exports.putTableData = (req, res) => {
+exports.putTableData = async (req, res) => {
     const tableName = req.params.tableName;
-    const id = req.params.id; // L'identifiant de la ligne à mettre à jour
+    const id = req.params.id;
     const data = req.body;
 
-    // Vérifier que le nom de la table ne contient que des lettres et chiffres pour éviter l'injection SQL
+    // Vérifier que le nom de la table est valide
     if (!/^[a-zA-Z0-9_]+$/.test(tableName)) {
         return res.status(400).send('Invalid table name');
     }
@@ -73,25 +73,23 @@ exports.putTableData = (req, res) => {
 
     const sql = `UPDATE \`${tableName}\` SET ${updates} WHERE id = ?`;
 
-    database.query(sql, [...Object.values(data), id], (err, results) => {
-        if (err) {
-            console.error('Database error:', err);
-            return res.status(500).send('Error updating data in database');
-        }
-
+    try {
+        const [results] = await database.query(sql, [...Object.values(data), id]);
         if (results.affectedRows === 0) {
             return res.status(404).send({ message: 'No record found with the given ID' });
         }
-
         res.status(200).send({ message: 'Data updated successfully' });
-    });
+    } catch (err) {
+        console.error('Database error:', err);
+        res.status(500).send('Error updating data in database');
+    }
 };
 
-exports.deleteTableData = (req, res) => {
+exports.deleteTableData = async (req, res) => {
     const tableName = req.params.tableName;
-    const id = req.params.id; // L'identifiant de la ligne à supprimer
+    const id = req.params.id;
 
-    // Vérifier que le nom de la table ne contient que des lettres et chiffres pour éviter l'injection SQL
+    // Vérifier que le nom de la table est valide
     if (!/^[a-zA-Z0-9_]+$/.test(tableName)) {
         return res.status(400).send('Invalid table name');
     }
@@ -103,25 +101,23 @@ exports.deleteTableData = (req, res) => {
 
     const sql = `DELETE FROM \`${tableName}\` WHERE id = ?`;
 
-    database.query(sql, [id], (err, results) => {
-        if (err) {
-            console.error('Database error:', err);
-            return res.status(500).send('Error deleting data from database');
-        }
-
+    try {
+        const [results] = await database.query(sql, [id]);
         if (results.affectedRows === 0) {
             return res.status(404).send({ message: 'No record found with the given ID' });
         }
-
         res.status(200).send({ message: 'Data deleted successfully' });
-    });
+    } catch (err) {
+        console.error('Database error:', err);
+        res.status(500).send('Error deleting data from database');
+    }
 };
 
-exports.getByIdTableData = (req, res) => {
+exports.getByIdTableData = async (req, res) => {
     const tableName = req.params.tableName;
-    const id = req.params.id; // L'identifiant de la ligne à récupérer
+    const id = req.params.id;
 
-    // Vérifier que le nom de la table ne contient que des lettres et chiffres pour éviter l'injection SQL
+    // Vérifier que le nom de la table est valide
     if (!/^[a-zA-Z0-9_]+$/.test(tableName)) {
         return res.status(400).send('Invalid table name');
     }
@@ -133,16 +129,14 @@ exports.getByIdTableData = (req, res) => {
 
     const sql = `SELECT * FROM \`${tableName}\` WHERE id = ?`;
 
-    database.query(sql, [id], (err, results) => {
-        if (err) {
-            console.error('Database error:', err);
-            return res.status(500).send('Error retrieving data from database');
-        }
-
+    try {
+        const [results] = await database.query(sql, [id]);
         if (results.length === 0) {
             return res.status(404).send({ message: 'No record found with the given ID' });
         }
-
         res.status(200).json(results[0]);
-    });
+    } catch (err) {
+        console.error('Database error:', err);
+        res.status(500).send('Error retrieving data from database');
+    }
 };

@@ -16,9 +16,9 @@ app.post('/register', (req, res) => {
     }
 });
 
-app.post('/login', (req, res) => {
+app.post('/login', async (req, res) => {
     try {
-        const token = auth.login(req.body.username, req.body.password);
+        const token = await auth.login(req.body.username, req.body.password);
         res.status(200).send(token);
     } catch (error) {
         res.status(400).send({ message: error.message });

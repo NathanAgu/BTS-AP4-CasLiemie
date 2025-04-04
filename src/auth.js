@@ -1,24 +1,33 @@
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
+const crypto = require('crypto'); // Utilisation de crypto pour MD5
 const config = require('../config/config.json');
+const database = require('./database'); // Importez votre module de connexion à la base de données
 
-const users = [
-    { username: 'user1', password: bcrypt.hashSync('password1', 8) },
-    { username: 'user2', password: bcrypt.hashSync('password2', 8) }
-];
-
-function register(username, password) {
-    const hashedPassword = bcrypt.hashSync(password, 8);
-    users.push({ username, password: hashedPassword });
-    return { username };
+async function register(login, password) {
+    const hashedPassword = crypto.createHash('md5').update(password).digest('hex');
+    const sql = 'INSERT INTO personne_login (login, mp) VALUES (?, ?)';
+    await database.query(sql, [login, hashedPassword]);
+    return { login };
 }
 
-function login(username, password) {
-    const user = users.find(u => u.username === username);
-    if (!user || !bcrypt.compareSync(password, user.password)) {
+async function login(login, password) {
+    const hashedPassword = crypto.createHash('md5').update(password).digest('hex');
+    const sql = 'SELECT * FROM personne_login WHERE login = ? AND mp = ?';
+
+    const [rows] = await database.query(sql, [login, hashedPassword]);
+
+    if (rows.length === 0) {
         throw new Error('Invalid credentials');
     }
-    const token = jwt.sign({ username }, config.secret, { expiresIn: '1h' });
+
+    // Mettre à jour la dernière connexion
+    const updateSql = 'UPDATE personne_login SET derniere_connexion = NOW() WHERE id = ?';
+    await database.query(updateSql, [rows[0].id]);
+
+    // Générer le token JWT
+    const token = jwt.sign({login: rows[0].login }, config.secret, { expiresIn: '1h' });
+    console.log(token);
+    
     return { token };
 }
 
@@ -32,6 +41,7 @@ function verifyToken(req, res, next) {
             return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' });
         }
         req.userId = decoded.id;
+        req.login = decoded.login;
         next();
     });
 }
